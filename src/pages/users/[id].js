@@ -5,18 +5,27 @@ import Button from "@/components/Button";
 import TodoItem from "@/components/TodoItems/TodoItem";
 import Input from "@/components/Input";
 import Link from "next/link";
-import useSWR from 'swr'
-
-const fetcher = url => axios.get(url).then(res => res.data)
+import { useRouter } from "next/router";
 
 const Home = () => {
- 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm();
-  // const [itemsList, setItemsList] = useState([])
+  const router = useRouter()
+  const {id} = router.query
+
+  const { register, handleSubmit, formState: { errors } } = useForm();
+  const [itemsList, setItemsList] = useState([])
   const [usersList, setUsersList] = useState([])
 
-  const { data: itemsList, error, isLoading, mutate } = useSWR('https://node-todo-api-gp9h.onrender.com/api/items', fetcher)
-
+  const fetchItems =() => {
+    axios.get('https://node-todo-api-gp9h.onrender.com/api/items',{
+        params: {user_id: id}
+      })
+      .then((response) => {
+        setItemsList([...response.data])
+      })
+      .catch((err) => {
+        debugger
+      })
+  }
 
   const fetchUsers =() => {
     axios.get('https://node-todo-api-gp9h.onrender.com/api/users')
@@ -30,9 +39,9 @@ const Home = () => {
 
   useEffect(() => {
     // api call
-    // fetchItems()
+    fetchItems()
     fetchUsers()
-  }, [])
+  }, [id])
 
   const onSubmit = (data) => {
     let currentUser = localStorage.getItem('todoUser')
@@ -61,10 +70,7 @@ const Home = () => {
       className="text-blue-500 underline ml-2"
       href={`/users/${user.id}`}
     >
-      <button>
-        {user.name}
-      </button>
-      
+      {user.name}
     </Link>
   )
 
@@ -73,25 +79,29 @@ const Home = () => {
       <div className="bg-white rounded shadow p-6 m-4 w-full lg:w-3/4 lg:max-w-lg">
         <div className="mb-4">
           <h1 className="text-grey-darkest">User List</h1>
-          {usersList.map((user) => (
-            <UserList user={user} key={user.id} />
-          ))}
+          {usersList.map((user, index) => {
+            return (
+              <>
+                <UserList user={user} key={user.id} />
+                {index < usersList.length - 2 && (', ')}
+              </>
+              
+            )
+          })}
           <h1 className="text-grey-darkest mt-5">Todo List</h1>
           <div className="flex mt-4 w-full">
             <form onSubmit={handleSubmit(onSubmit)}  className="w-full flex">
               <Input
-                registerBuilder={register("item", {required: true})}
+                registerBuilder={register("item")}
                 placeholder="Add Todo"
-                error={errors.item}
-                inputName='Item'
               />
               <Button label='Add' colourType='info'/>
             </form>
           </div>
         </div>
         <div>
-          {itemsList && itemsList.map((item) => (
-            <TodoItem item={item}  key={item.id} onChange={mutate}/>
+          {itemsList.map((item) => (
+            <TodoItem item={item}  key={item.id} onChange={fetchItems}/>
           ))}
         </div>
       </div>
